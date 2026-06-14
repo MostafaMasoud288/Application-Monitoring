@@ -1,0 +1,21 @@
+# Optional: only apply this if you're using the Prometheus Operator
+# (e.g. installed via the kube-prometheus-stack Helm chart), which
+# watches ServiceMonitor custom resources instead of pod annotations.
+#
+# If your Prometheus is configured with kubernetes_sd_configs +
+# the prometheus.io/scrape annotation relabeling (already set on the
+# Deployment in deployment.yaml), you do NOT need this file.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: node-docker-app
+  labels:
+    app: node-docker-app
+spec:
+  selector:
+    matchLabels:
+      app: node-docker-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
