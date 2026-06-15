@@ -17,6 +17,8 @@ image to a local cluster (e.g. minikube, kind, k3d).
 └── k8s/
     ├── deployment.yaml
     ├── service.yaml
+    |   app-alert.yaml
+    |   alertmanager-values.yaml
     └── servicemonitor.yaml            # optional, for Prometheus Operator
 ```
 
@@ -66,7 +68,7 @@ Once both secrets are set, push to `main` and the workflow will:
 
 ## 5. Deploy to your local Kubernetes cluster
 
-Edit `k8s/deployment.yaml` and replace the image with your own:
+Edit `k8s/app-files/deployment.yaml` and replace the image with your own:
 
 ```yaml
 image: <your-dockerhub-username>/node-docker-app:latest
@@ -75,8 +77,8 @@ image: <your-dockerhub-username>/node-docker-app:latest
 Then apply the manifests:
 
 ```bash
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/app-files/deployment.yaml
+kubectl apply -f k8s/app-files/service.yaml
 ```
 
 If you're using minikube/kind and want to access the service:
@@ -103,7 +105,7 @@ use whichever matches how Prometheus is set up on your cluster:
 
 **A. Plain Prometheus with annotation-based discovery**
 
-`k8s/deployment.yaml` already includes these pod annotations:
+`k8s/app-files/deployment.yaml` already includes these pod annotations:
 
 ```yaml
 prometheus.io/scrape: "true"
@@ -122,7 +124,7 @@ If Prometheus is managed by the Prometheus Operator, apply the included
 `ServiceMonitor`:
 
 ```bash
-kubectl apply -f k8s/servicemonitor.yaml
+kubectl apply -f k8s/app-files/servicemonitor.yaml
 ```
 
 This tells the Operator to scrape the `node-docker-app` Service's `http`
@@ -138,4 +140,4 @@ accordingly).
 - `/health` is used for the Docker `HEALTHCHECK` as well as the Kubernetes
   liveness/readiness probes.
 - If you rename the image (currently `node-docker-app`), update the tag names
-  in `.github/workflows/docker-publish.yml` and `k8s/deployment.yaml` to match.
+  in `.github/workflows/docker-publish.yml` and `k8s/app-files/deployment.yaml` to match.
