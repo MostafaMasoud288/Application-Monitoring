@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nodejs-app-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus-stack
+spec:
+  groups:
+  - name: nodejs.rules
+    rules:
+    - alert: NodeAppDown
+      expr: absent(up{job="node-docker-app"})
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "🚨 Application is DOWN!"
+        description: "Node.js application instance {{ $labels.instance }} has been unresponsive for more than 1 minute."

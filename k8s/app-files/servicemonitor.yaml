@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: node-docker-app
+  namespace: monitoring
+  labels:
+    app: node-docker-app
+    release: prometheus-stack
+spec:  
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: node-docker-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
