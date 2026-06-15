@@ -3,7 +3,9 @@
 A minimal Node.js (Express) app, containerized with Docker, with a GitHub Actions
 workflow that builds the image and pushes it to Docker Hub on every push to `main`.
 A sample Kubernetes Deployment/Service is included for deploying the resulting
-image to a local cluster (e.g. minikube, kind, k3d).
+image to a local cluster (e.g. minikube, kind, k3d). Prometheus stack is used to 
+monitor the cluster's condition with offering solid analysis using grafana dashboards.
+
 
 ## Project structure
 
