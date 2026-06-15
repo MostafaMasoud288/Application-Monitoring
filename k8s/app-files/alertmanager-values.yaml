@@ -1,8 +1,6 @@
 alertmanager:
   config:
     global:
-<<<<<<< HEAD
-      slack_api_url: 'https://hooks.slack.com/services/YOUR_WEBHOOK_URL_HERE' 
 =======
       slack_api_url: "PUT_YOUR_WEBHOOK_HERE" 
 >>>>>>> 022d47d ( Final Commit)
