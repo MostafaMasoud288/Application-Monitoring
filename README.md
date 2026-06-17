@@ -1,145 +1,99 @@
-# node-docker-app
+# 🚀 Kubernetes GitOps & Observability Pipeline
 
-A minimal Node.js (Express) app, containerized with Docker, with a GitHub Actions
-workflow that builds the image and pushes it to Docker Hub on every push to `main`.
-A sample Kubernetes Deployment/Service is included for deploying the resulting
-image to a local cluster (e.g. minikube, kind, k3d). Prometheus stack is used to 
-monitor the cluster's condition with offering solid analysis using grafana dashboards.
+An end-to-end GitOps and monitoring architecture deployed on a local Kubernetes (`kind`) cluster. This project demonstrates how to automate application delivery, manage infrastructure declaratively, and implement proactive monitoring and alerting using the Prometheus stack.
 
+---
 
-## Project structure
+## 🏗️ Architecture Overview (ASCII Flow)
+
+Below is a high-level representation of the infrastructure and data flow:
+
+```text
+[ Developer (Mostafa) ]
+          | (1. Push Code)
+          v
++-----------------------+        (2. Build & Push)       +-------------------+
+|   GitHub Repository   | -----------------------------> |    Docker Hub     |
+| (Code & K8s Manifests)|                                | (Image Registry)  |
++-----------------------+                                +-------------------+
+          |                                                       |
+          | (3. Pull Manifests/Helm Values)                       | (4. Pull Image)
+          v                                                       v
++=============================================================================+
+|                      Local Kubernetes Cluster (kind)                        |
+|                                                                             |
+|  +-----------------+           [ Deploys ]           +-------------------+  |
+|  |     ArgoCD      | ------------------------------> |   App Namespace   |  |
+|  | (GitOps Engine) |                                 |  (Node.js Pods)   |  |
+|  +-----------------+                                 +-------------------+  |
+|          |                                                  |    ^          |
+|          |                     [ Deploys ]                  |    |          |
+|          +-------------------------------------------+      |    | (Scrapes)|
+|                                                      v      v    |          |
+|  +-----------------------------------------------------------------------+  |
+|  |                         Monitoring Namespace                          |  |
+|  |                                                                       |  |
+|  |  +-------------------+      +-------------------+      +-----------+  |  |
+|  |  | Prometheus Server | ---> |   Alertmanager    | ---> |  Grafana  |  |  |
+|  |  +-------------------+      +-------------------+      +-----------+  |  |
+|  |                                      |                                |  |
+|  +--------------------------------------|--------------------------------+  |
+|                                         | (Reads Webhook URL)               |
+|                              [ Kubernetes Secret ]                          |
++=============================================================================+
+                                          |
 
 ```
-.
-├── server.js                          # Express app (/, /health, /metrics)
-├── package.json
-├── Dockerfile                         # multi-stage build
-├── .dockerignore
-├── .github/workflows/docker-publish.yml
-└── k8s/
-    ├── deployment.yaml
-    ├── service.yaml
-    |   app-alert.yaml
-    |   alertmanager-values.yaml
-    └── servicemonitor.yaml            # optional, for Prometheus Operator
-```
+🛠️ Tech Stack & Tools
+Orchestration: Kubernetes (kind on local Linux VM)
 
-## 1. Run locally (no Docker)
+CI/CD & GitOps: GitHub Actions, ArgoCD, Git
 
-```bash
-npm install
-npm start
-# visit http://localhost:3000 and http://localhost:3000/health
-```
+Containerization: Docker, Docker Hub
 
-## 2. Build and run with Docker
+Observability: Prometheus Operator, Grafana, Alertmanager, PromQL
 
-```bash
-docker build -t node-docker-app .
-docker run -p 3000:3000 node-docker-app
-```
+Package Management: Helm
 
-## 3. Push the project to GitHub
+Alerting Integration: Slack API (Webhooks)
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: node app + docker + workflow"
-git branch -M main
-git remote add origin <your-github-repo-url>
-git push -u origin main
-```
+⚙️ Project Pipeline & Execution Steps
+This project was built and executed in four main phases:
 
-## 4. Configure GitHub Actions to push to Docker Hub
+Phase 1: Continuous Integration (CI)
+Created a Node.js application exposing a /metrics endpoint.
 
-The workflow at `.github/workflows/docker-publish.yml` runs on every push to
-`main` (and can also be triggered manually via "Run workflow").
+Configured GitHub Actions to trigger on every push to the main branch.
 
-It needs two repository secrets:
+The pipeline builds the Docker image, tags it, pushes it to Docker Hub, and updates the Kubernetes deployment manifests with the new image tag.
 
-1. Go to your repo on GitHub → **Settings → Secrets and variables → Actions → New repository secret**
-2. Add:
-   - `DOCKERHUB_USERNAME` — your Docker Hub username
-   - `DOCKERHUB_TOKEN` — a Docker Hub access token (Docker Hub → Account Settings → Security → New Access Token; don't use your password)
+Phase 2: GitOps & Continuous Deployment (CD)
+Provisioned a local Kubernetes cluster using kind (Kubernetes IN Docker) to simulate a real-world environment.
 
-Once both secrets are set, push to `main` and the workflow will:
-- build the image using Buildx (with layer caching)
-- push it as:
-  - `<DOCKERHUB_USERNAME>/node-docker-app:latest`
-  - `<DOCKERHUB_USERNAME>/node-docker-app:<commit-sha>`
+Installed ArgoCD inside the cluster to act as the GitOps controller.
 
-## 5. Deploy to your local Kubernetes cluster
+Configured ArgoCD Application resources to track the GitHub repository and automatically sync the Node.js application to the cluster.
 
-Edit `k8s/app-files/deployment.yaml` and replace the image with your own:
+Phase 3: Infrastructure Monitoring (Observability)
+Used ArgoCD to deploy the kube-prometheus-stack via Helm, passing custom values.yaml directly from the Git repository.
 
-```yaml
-image: <your-dockerhub-username>/node-docker-app:latest
-```
+Created a ServiceMonitor custom resource to dynamically guide the Prometheus Operator to discover and scrape metrics from the Node.js application pods.
 
-Then apply the manifests:
+Phase 4: Proactive Alerting & Security
+Defined custom PrometheusRules (e.g., absent(up) to detect if zero pods are running).
 
-```bash
-kubectl apply -f k8s/app-files/deployment.yaml
-kubectl apply -f k8s/app-files/service.yaml
-```
+Secured the Slack Webhook URL by creating a manual Kubernetes Secret inside the cluster (avoiding plain-text secrets in GitHub to pass Push Protection).
 
-If you're using minikube/kind and want to access the service:
+Configured Alertmanager to read the secret and route formatted alerts (Critical/Resolved) directly to a dedicated Slack channel whenever the application goes down.
 
-```bash
-kubectl get svc node-docker-app
-# NodePort is set to 30080 in service.yaml
-minikube service node-docker-app   # for minikube
-```
+💡 Key Highlights & Learnings
+Security First: Handled sensitive data (Slack Webhooks) securely using Kubernetes Secrets rather than exposing them in source code.
 
-## 6. Prometheus monitoring
+Declarative Infrastructure: Everything from the application deployments to the monitoring stack configurations is managed declaratively via Git.
 
-The app exposes a `/metrics` endpoint (via `prom-client`) with default Node.js
-process metrics (CPU, memory, event loop lag, GC) plus two custom metrics:
-`http_request_duration_seconds` and `http_requests_total`, both labeled by
-method, route, and status code.
+Reliability: Built a system that not only deploys automatically but also proactively notifies administrators of potential downtime before users are impacted.
 
-```bash
-curl http://localhost:3000/metrics
-```
-
-There are two ways to let Prometheus discover this endpoint in Kubernetes —
-use whichever matches how Prometheus is set up on your cluster:
-
-**A. Plain Prometheus with annotation-based discovery**
-
-`k8s/app-files/deployment.yaml` already includes these pod annotations:
-
-```yaml
-prometheus.io/scrape: "true"
-prometheus.io/port: "3000"
-prometheus.io/path: "/metrics"
-```
-
-This works if your `prometheus.yml` has a `kubernetes_sd_configs` job with
-relabeling rules that respect these annotations (the standard example from
-the Prometheus docs / most "prometheus on kubernetes" tutorials). No further
-action needed beyond applying `deployment.yaml`.
-
-**B. Prometheus Operator / kube-prometheus-stack**
-
-If Prometheus is managed by the Prometheus Operator, apply the included
-`ServiceMonitor`:
-
-```bash
-kubectl apply -f k8s/app-files/servicemonitor.yaml
-```
-
-This tells the Operator to scrape the `node-docker-app` Service's `http`
-port at `/metrics` every 15s. Make sure the `ServiceMonitor`'s namespace is
-one your Prometheus instance is configured to watch (or adjust
-`spec.serviceMonitorSelector` / namespace selectors on the Prometheus CR
-accordingly).
-
-## Notes
-
-- The Dockerfile uses a multi-stage build with `node:20-alpine` and runs the
-  app as a non-root `node` user.
-- `/health` is used for the Docker `HEALTHCHECK` as well as the Kubernetes
-  liveness/readiness probes.
-- If you rename the image (currently `node-docker-app`), update the tag names
-  in `.github/workflows/docker-publish.yml` and `k8s/app-files/deployment.yaml` to match.
+Developed by [Mostafa Masoud]
+                                          | (5. Fires Alert)
+                                          v
+                               [ 💬 Slack Workspace ]
