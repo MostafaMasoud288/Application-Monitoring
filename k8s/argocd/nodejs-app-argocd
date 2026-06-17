@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+    name: nodejs-app-argocd
+    namespace: argocd
+spec:
+    project: default
+    source:
+        repoURL: 'https://github.com/MostafaMasoud288/Application-Monitoring.git'
+        path: k8s/app-files
+        targetRevision: main
+    destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: default
+    syncPolicy:
+    automated:
+        selfHeal: true
+        prune: true
