@@ -94,6 +94,3 @@ Declarative Infrastructure: Everything from the application deployments to the m
 Reliability: Built a system that not only deploys automatically but also proactively notifies administrators of potential downtime before users are impacted.
 
 Developed by [Mostafa Masoud]
-                                        
-                                          v
-                               [ 💬 Slack Workspace ]
