@@ -5,7 +5,7 @@ metadata:
   labels:
     app: node-docker-app
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: node-docker-app
